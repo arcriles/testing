@@ -1,0 +1,352 @@
+<head>
+  <meta charset="utf-8">
+  <title>Time Series</title>
+  <script src="https://cdn.zingchart.com/zingchart.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+  <style>
+    body {
+      background-color: rgb(114, 114, 114);
+      color: black;
+    }
+
+    .zc-body {
+      background-color: rgb(53, 53, 53);
+      font: 100%/1.5 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif, 'Comic Sans';
+    }
+
+    .chart--container {
+      background-color: rgb(71, 71, 71);
+      min-height: 530px;
+      width: 100%;
+      height: 100%;
+    }
+
+    #day {
+      color: #2196F3;
+    }
+
+    #day {
+      margin-top: 20px;
+      margin-right: 20px;
+      font-size: 25px;
+      float: right;
+    }
+
+    #date-picker-container {
+      margin-left: 25px;
+    }
+
+    [data-period] {
+      margin: 5px;
+      padding: 10px 10px;
+      background-color: #2196F3;
+      color: #FFF;
+      display: inline-block;
+    }
+
+    [data-period]:hover {
+      cursor: pointer;
+      opacity: .7;
+    }
+
+    #date-picker-container div {
+      display: inline-block;
+    }
+
+    #date-from,
+    #date-to {
+      margin-right: 6px;
+      margin-left: 6px;
+      color: #2196F3;
+    }
+
+    .active {
+      background: #fd992b;
+    }
+
+    .zc-ref {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="myChart" class="chart--container" ng-app="app" ng-controller="tableAPI">
+    <div id="date-picker-container">
+      <span data-period="1" class="active">All Time</span>
+      <span data-period="2">90 Days</span>
+      <span data-period="3">60 Days</span>
+      <span data-period="4">30 Days</span>
+      <div>
+        <b>From:</b>
+        <span id="date-from"></span>
+      </div>
+      <div>
+        <b>To:</b>
+        <span id="date-to"></span>
+      </div>
+      <div id="day"></div>
+    </div>
+    <div id="main-container">
+      <a class="zc-ref" href="https://www.zingchart.com/">Powered by ZingChart</a>
+    </div>
+  </div>
+  <script>
+    ZC.LICENSE = ["569d52cefae586f634c54f86dc99e6a9", "b55b025e438fa8a98e32482b5f768ff5"];
+
+    function invokeChart(data) {
+      var chartConfig = {
+        type: 'mixed',
+        title: {
+          text: 'Time Series Covid-19',
+          align: 'center'
+        },
+        legend: {
+          layout: '1x5',
+          align: 'left',
+          backgroundColor: 'none',
+          borderWidth: '0px',
+          item: {
+            cursor: 'hand',
+            fontColor: 'rgb(255, 0, 0)'
+          },
+          marker: {
+            type: 'circle',
+            borderWidth: '0px',
+            cursor: 'hand'
+          },
+          verticalAlign: 'top'
+        },
+        plot: {
+          tooltip: {
+            visible: false
+          },
+          aspect: 'spline',
+          marker: {
+            visible: false
+          }
+        },
+        plotarea: {},
+        scaleX: {
+          values: data.tanggal,
+          itemsOverlap: true,
+          lineWidth: '0px',
+          tick: {
+            alpha: 1,
+            lineColor: 'rgb(32, 148, 243)',
+            lineWidth: '2px'
+          },
+          zooming: true,
+          zoomTo: [0, data.meninggal.length - 1]
+        },
+        scaleY: {
+          values: '0:20000:1000',
+          guide: {
+            visible: false
+          }
+        },
+        scaleY2: {},
+        crosshairX: {
+          lineColor: '#2196F3',
+          lineStyle: 'dashed',
+          lineWidth: '2px',
+          marker: {
+            type: 'triangle',
+            size: '5px',
+            visible: true
+          },
+          plotLabel: {
+            visible: false
+          }
+        },
+        preview: {
+          live: true
+        },
+        series: [{
+            type: 'line',
+            values: data.sembuh,
+            lineColor: '#fa0800',
+            scales: 'scale-x, scale-y-2',
+            text: "Sembuh"
+          },
+          {
+            type: 'line',
+            values: data.meninggal,
+            lineColor: '#0207ff',
+            scales: 'scale-x, scale-y-2',
+            text: "Meninggal"
+          },
+          {
+            type: 'line',
+            values: data.positif,
+            lineColor: '#00ff22',
+            scales: 'scale-x, scale-y-2',
+            text: "Positif"
+          }
+        ]
+      };
+      return chartConfig;
+    }
+
+
+    // Fetch Data from API
+
+    var app = angular.module('app', []);
+
+    const baseURL = 'https://apicovid19indonesia-v2.vercel.app/api';
+
+    var dataHarian;
+    var dataHarianLength;
+
+    app.controller('tableAPI', function ($scope, $rootScope, $http) {
+      $http.get(baseURL).then(
+        function (result) {
+          console.log(result);
+          console.log(result.data.endpoints[2]);
+          const harianURL = result.data.endpoints[2];
+
+          $http.get(harianURL).then(
+            function (harian) {
+              // console.log(harian.data);
+              dataHarian = harian.data;
+              dataHarianLength = dataHarian.length;
+              console.log(dataHarian);
+              $rootScope.harian = dataHarian;
+              $scope.harian = dataHarian;
+
+              let dataChart = parserObject(dataHarian);
+              // console.log(dataChart);
+              // console.log(dataChart.tanggal);
+              // console.log(dataChart.sembuh);
+              // console.log(dataChart.meninggal);
+              // console.log(dataChart.positif);
+
+              zingchart.render({
+                id: 'myChart',
+                data: invokeChart(dataChart),
+                width: '100%',
+              });
+            },
+            function (err) {
+              console.log(err);
+            }
+          )
+        },
+        function (error) {
+          console.log(error);
+        });
+    });
+
+    function parserObject(data) {
+
+      let tanggal = [];
+      let sembuh = [];
+      let meninggal = [];
+      let positif = [];
+
+      for (i = 0; i < dataHarian.length; i++) {
+        tanggal.push(data[i].tanggal.slice(0, 10));
+        sembuh.push(data[i].sembuh);
+        meninggal.push(data[i].meninggal);
+        positif.push(data[i].positif);
+      }
+
+      let dataParser = {
+        tanggal: tanggal,
+        sembuh: sembuh,
+        meninggal: meninggal,
+        positif: positif
+      }
+      return dataParser;
+    }
+
+    /**
+     * As we are moving the guide, we want to update the items outside
+     * of the chart. We could do this inside the chart, but since JS
+     * is single threaded we don't want to block UI with a chart 
+     * update. A chart update is more expensive than a node update.
+     * You may see no performance gains on a dataset this size, but
+     * with some increase its possible to see a discrepancy for the
+     * user. This is why I chose to contstruct the items outside
+     * of the graph.
+     */
+    zingchart.guide_mousemove = (e) => {
+      document.getElementById('day').innerHTML = 'Day: ' + e['scale-label']['scale-x'];
+    }
+
+    /*********** Functions ***********/
+
+    /** 
+     * ZingChart defined event listener. Will capture ZoomEvent and related 
+     * Zooming Information.
+     */
+    zingchart.zoom = (e) => {
+      displayZoomValues(e.kmin, e.kmax);
+    }
+
+
+    /**
+     * Apply dates to display current zoomed dates
+     */
+    let displayZoomValues = (sFrom, sTo) => {
+      let dateFrom = document.getElementById('date-from');
+      let dateTo = document.getElementById('date-to');
+      // If viewall is clicked show the default dates
+      if (!sFrom) {
+        sFrom = dataHarian[0].tanggal.slice(0, 10);
+      }
+      if (!sTo) {
+        sTo = dataHarian[dataHarianLength - 1].tanggal.slice(0, 10);
+      }
+
+      dateFrom.innerHTML = sFrom;
+      dateTo.innerHTML = sTo;
+    }
+
+    /**
+     * Apply zoom to graph.
+     */
+    let zoomToIndex = (max) => {
+
+      // ZingChart api automated zoom. Have to be careful
+      // not to zoom past the end of the graph
+      zingchart.exec('myChart', 'zoomto', { // Vadim Bylat Rucci Ganteng
+        xmax: dataHarianLength-1,
+        xmin: dataHarianLength - max - 1
+      });
+    }
+
+    /**
+     * Capture the spans clicks with data-period attribute.
+     */
+    document.getElementById('date-picker-container').addEventListener('click', (e) => {
+      let target = e.target;
+      // Only capture spans with data-period attribute
+      if (target.dataset['period']) {
+        // Toggle classes
+        removeActiveClass();
+        e.target.classList.toggle('active');
+
+        switch (target.dataset['period']) {
+          case '1':
+            zingchart.exec('myChart', 'viewall');
+            break;
+          case '2':
+            zoomToIndex(90);
+            break;
+          case '3':
+            zoomToIndex(60);
+            break;
+          default:
+            zoomToIndex(30);
+            break;
+        }
+      }
+    });
+
+    let removeActiveClass = () => {
+      let activeElement = document.querySelector('[data-period].active');
+      activeElement.classList.toggle('active');
+    }
+  </script>
+</body>
